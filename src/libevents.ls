@@ -1,45 +1,41 @@
-
-DaemonPlugin = global.DaemonPlugin
-
 class EventsDaemon extends DaemonPlugin
-  description: 'allows for definitions of activities such as reload on file change'
+    description: 'allows for definitions of activities such as reload on file change'
 
-  initialize: ->
-    @enabled := @program.autonomous
-    return no unless @enabled
+    enabled: yes
+    
+    -> @install!
 
-  verify: -> @enabled # don't leave this, actually add some checks
+    configure: ->
+        it.option '-a, --autonomous', 'listens to the various restart triggering signals'
 
-  notice: ->
-    console.log it, @@displayName
+        # error handling
+        it.option '-e, --errors', 'watch the process for errors, provides an error event'
+        it.option '-E, --enforce-errors', 'watch the process for errors, provides handlers for error types'
 
-  parse-parameters: ->
-    # -e implies -a
-    # -w implies -a
-    # -d implies -w, but not -a
-    # -r implies -d, -w but not -a
+        # file changes
+        it.option '-w, --watch', 'watch the file for changes, provides an update event'
 
-    if @program.errors then @program <<< {+autonomous}
-    if @program.watch then @program <<< {+autonomous}
-    if @program.directory then @program <<< {+watch}
-    if @program.recursive then @program <<< {+directory, +watch}
+        it.option '-d, --directory', 'watches the entire directory for changes'
+        it.option '-r, --recursive', 'allows recursive directory watching'
 
-  (@program) ->
-    @install!
+    initialize: ->
+        @parse-parameters it
+        @enabled := it.autonomous
+        return no unless @enabled
 
-    @parse-parameters!
+    verify: -> @enabled # don't leave this, actually add some checks
 
-    @register '-a, --autonomous', 'listens to the various restart triggering signals'
+    notice: ->
+        console.log it, @@displayName
 
-    # error handling
-    @register '-e, --errors', 'watch the process for errors, provides an error event'
-    @register '-E, --enforce-errors', 'watch the process for errors, provides handlers for error types'
-
-    # file changes
-    @register '-w, --watch', 'watch the file for changes, provides an update event'
-
-    @register '-d, --directory', 'watches the entire directory for changes'
-    @register '-r, --recursive', 'allows recursive directory watching'
-
+    parse-parameters: ->
+        # -e implies -a
+        # -w implies -a
+        # -d implies -w, but not -a
+        # -r implies -d, -w but not -a
+        if it.errors then it <<< {+autonomous}
+        if it.watch then it <<< {+autonomous}
+        if it.directory then it <<< {+watch}
+        if it.recursive then it <<< {+directory, +watch}
 
 module.exports = EventsDaemon

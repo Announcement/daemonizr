@@ -1,40 +1,41 @@
 require! <[http express socket.io]>
 
-DaemonPlugin = global.DaemonPlugin
-
 class Interface extends DaemonPlugin
-  description: 'Provides a web server and websocket protocol interface'
-  enabled: no
+    description: 'Provides a web server and websocket protocol interface'
 
-  start-server: ->
-    @configure-server!
-    @server.listen @program.port or 0
+    -> @install!
 
-    "This module is loaded and listening on port #{ @server.address!port }"
+    enabled: yes
+    verify: -> yes
+    
+    configure: ->
+        it.option '-h, --server [port]' 'enables an option web server interface'
 
-  configure-server: ->
-    @server.on \request (request, response) ->
-      response.end 'You are monitoring an unconfigured daemonizr instance.'
+    initialize: ->
+        @app = express!
+        @server = http.create-server @app
+        @io = socket @server
 
-    @io.on \connection (socket) ->
-      socket.send 'You are monitoring an unconfigured daemonizr instance'
+        @enabled := it.port
+        @start-server! if it.port
 
-  initialize: ->
-    @app = express!
-    @server = http.create-server @app
-    @io = socket @server
+        return if @enabled
 
-    @enabled := @program.port
-    @start-server! if @program.port
+        'This module was loaded, but not enabled by the user.'
 
-    return if @enabled
+    start-server: ->
+        @configure-server!
+        @server.listen @program.port or 0
 
-    'This module was loaded, but not enabled by the user.'
+        "This module is loaded and listening on port #{ @server.address!port }"
 
-  verify: -> @enabled  # don't leave this, actually add some checks
+    configure-server: ->
+        @server.on \request (request, response) ->
+        response.end 'You are monitoring an unconfigured daemonizr instance.'
 
-  (@program) ->
-    @register '-h, --server [port]', 'enables an option web server interface'
-    @install!
+        @io.on \connection (socket) ->
+        socket.send 'You are monitoring an unconfigured daemonizr instance'
+
+    verify: -> @enabled  # don't leave this, actually add some checks
 
 module.exports = Interface
